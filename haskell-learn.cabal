@@ -6,12 +6,12 @@ cabal-version: 2.2
 
 name:           haskell-learn
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/haskell-learn#readme>
+description:    Please see the README on GitHub at <https://github.com/ArthurJordao/haskell-learn#readme>
 homepage:       https://github.com/githubuser/haskell-learn#readme
 bug-reports:    https://github.com/githubuser/haskell-learn/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2023 Author name here
+author:         ArthurJordao
+maintainer:     hi@arthurjordao.dev
+copyright:      2023 Arthur Jordão
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
@@ -25,7 +25,9 @@ source-repository head
 
 library
   exposed-modules:
+      IOActions
       Lib
+      Typeclasses
   other-modules:
       Paths_haskell_learn
   autogen-modules:
