@@ -37,3 +37,10 @@ handleArgs =
 eitherToError :: (Show a) => Either a b -> IO b
 eitherToError (Right a) = return a
 eitherToError (Left e) = Exception.throwIO . IOError.userError $ show e
+
+groupsOf :: Int -> [a] -> [[a]]
+groupsOf _ [] = []
+groupsOf 0 _ = []
+groupsOf n elems =
+  let (hd, tl) = splitAt n elems
+   in hd : groupsOf n tl
