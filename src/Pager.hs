@@ -44,3 +44,18 @@ groupsOf 0 _ = []
 groupsOf n elems =
   let (hd, tl) = splitAt n elems
    in hd : groupsOf n tl
+
+wordWrap :: Int -> Text.Text -> [Text.Text]
+wordWrap lineLength lineText
+  | Text.length lineText <= lineLength = [lineText]
+  | otherwise =
+      let (candidate, nextLines) = Text.splitAt lineLength lineText
+          (firstLine, overFlow) = softWrap candidate (Text.length candidate - 1)
+       in firstLine : wordWrap lineLength (overFlow <> nextLines)
+  where
+    softWrap handwrappedText textIndex
+      | textIndex <= 0 = (handwrappedText, Text.empty)
+      | Text.index handwrappedText textIndex == ' ' =
+          let (wrappedLine, rest) = Text.splitAt textIndex handwrappedText
+           in (wrappedLine, Text.tail rest)
+      | otherwise = softWrap handwrappedText (textIndex - 1)
