@@ -4,12 +4,13 @@ module IOActions
     ioIOToIO,
     myTraverse,
     calculator,
+    findAndReplaceInFile,
   )
 where
 
 import Control.Monad (join)
 import Data.Text (pack, replace, unpack)
-import System.IO (IOMode (ReadMode, ReadWriteMode), hClose, hGetContents, hPutStr, openFile)
+import System.IO (IOMode (ReadMode), hClose, hGetContents, openFile)
 
 doSomeFileStuff :: IO ()
 doSomeFileStuff =
