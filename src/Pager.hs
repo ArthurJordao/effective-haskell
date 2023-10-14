@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -11,6 +12,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as TextIO
 import qualified System.Environment as Env
+import System.IO
 import qualified System.IO.Error as IOError
 import System.Info as SystemInfo
 import System.Process (readProcess)
@@ -92,3 +94,26 @@ getTerminalSize =
           { screenRows = read $ init rows,
             screenColumns = read $ init cols
           }
+
+data Command
+  = Continue
+  | Cancel
+  deriving (Eq, Show)
+
+getCommand :: IO Command
+getCommand =
+  hSetBuffering stdin NoBuffering
+    >> hSetEcho stdin False
+    >> getChar
+    >>= \case
+      ' ' -> return Continue
+      'q' -> return Cancel
+      _ -> getCommand
+
+loop :: IO ()
+loop =
+  putStrLn "do you want to Continue (space) or quit (q)"
+    >> getCommand
+    >>= \case
+      Continue -> putStrLn "okay, continuing!" >> loop
+      Cancel -> putStrLn "goodbye!"
