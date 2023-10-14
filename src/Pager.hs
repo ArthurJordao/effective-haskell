@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Pager
@@ -59,3 +60,16 @@ wordWrap lineLength lineText
           let (wrappedLine, rest) = Text.splitAt textIndex handwrappedText
            in (wrappedLine, Text.tail rest)
       | otherwise = softWrap handwrappedText (textIndex - 1)
+
+data ScreenDimensions = ScreenDimensions
+  { screenRows :: Int,
+    screenColumns :: Int
+  }
+  deriving (Show)
+
+paginate :: ScreenDimensions -> Text.Text -> [Text.Text]
+paginate dimensions text =
+  let unwrappedLines = Text.lines text
+      wrappedLines = concatMap (wordWrap dimensions.screenColumns) unwrappedLines
+      pageLines = groupsOf dimensions.screenRows wrappedLines
+   in map Text.unlines pageLines
