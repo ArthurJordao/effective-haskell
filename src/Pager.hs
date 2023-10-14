@@ -12,6 +12,8 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as TextIO
 import qualified System.Environment as Env
 import qualified System.IO.Error as IOError
+import System.Info as SystemInfo
+import System.Process (readProcess)
 
 pager :: IO ()
 pager =
@@ -73,3 +75,20 @@ paginate dimensions text =
       wrappedLines = concatMap (wordWrap dimensions.screenColumns) unwrappedLines
       pageLines = groupsOf dimensions.screenRows wrappedLines
    in map Text.unlines pageLines
+
+getTerminalSize :: IO ScreenDimensions
+getTerminalSize =
+  case SystemInfo.os of
+    "darwin" -> tputScreenDimensions
+    "linux" -> tputScreenDimensions
+    _ -> pure $ ScreenDimensions {screenRows = 25, screenColumns = 80}
+  where
+    tputScreenDimensions :: IO ScreenDimensions
+    tputScreenDimensions = do
+      rows <- readProcess "tput" ["lines"] ""
+      cols <- readProcess "tput" ["cols"] ""
+      return $
+        ScreenDimensions
+          { screenRows = read $ init rows,
+            screenColumns = read $ init cols
+          }
