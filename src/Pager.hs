@@ -47,6 +47,7 @@ pager = do
   targetFilePath <- eitherToError =<< handleArgs
   contents <- TextIO.hGetContents =<< openFile targetFilePath ReadMode
   termSize <- getTerminalSize
+  hSetBuffering stdout NoBuffering
   finfo <- fileInfo targetFilePath
   let pages = paginate termSize finfo contents
   showPages pages
