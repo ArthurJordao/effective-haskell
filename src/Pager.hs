@@ -1,7 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Pager
   ( pager,
@@ -13,7 +12,6 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as TextIO
 import qualified Data.Time.Clock as Clock
-import qualified Data.Time.Clock.POSIX as PosixClock
 import qualified Data.Time.Format as TimeFormat
 import qualified System.Directory as Directory
 import qualified System.Environment as Env
@@ -45,20 +43,13 @@ data FileInfo = FileInfo
   deriving (Show)
 
 pager :: IO ()
-pager =
-  handleIOError $
-    handleArgs
-      >>= eitherToError
-      >>= flip openFile ReadMode
-      >>= TextIO.hGetContents
-      >>= \contents ->
-        getTerminalSize >>= \termSize ->
-          let pages = paginate termSize contents
-           in showPages pages
-  where
-    handleIOError :: IO () -> IO ()
-    handleIOError ioAction =
-      Exception.catch ioAction (\e -> putStr "I ran into an error: " >> print @IOError e)
+pager = do
+  targetFilePath <- eitherToError =<< handleArgs
+  contents <- TextIO.hGetContents =<< openFile targetFilePath ReadMode
+  termSize <- getTerminalSize
+  finfo <- fileInfo targetFilePath
+  let pages = paginate termSize finfo contents
+  showPages pages
 
 handleArgs :: IO (Either String FilePath)
 handleArgs =
@@ -96,12 +87,18 @@ wordWrap lineLength lineText
            in (wrappedLine, Text.tail rest)
       | otherwise = softWrap handwrappedText (textIndex - 1)
 
-paginate :: ScreenDimensions -> Text.Text -> [Text.Text]
-paginate dimensions text =
-  let unwrappedLines = Text.lines text
-      wrappedLines = concatMap (wordWrap dimensions.screenColumns) unwrappedLines
-      pageLines = groupsOf dimensions.screenRows wrappedLines
-   in map Text.unlines pageLines
+paginate :: ScreenDimensions -> FileInfo -> Text.Text -> [Text.Text]
+paginate dimensions finfo text =
+  let rows' = dimensions.screenRows - 1
+      wrappedLines = concatMap (wordWrap dimensions.screenColumns) (Text.lines text)
+      pages = map (Text.unlines . padTo rows') $ groupsOf rows' wrappedLines
+      pageCount = length pages
+      statusLines = map (formatFileInfo finfo dimensions.screenColumns pageCount) [1 .. pageCount]
+   in zipWith (<>) pages statusLines
+  where
+    padTo :: Int -> [Text.Text] -> [Text.Text]
+    padTo lineCount rowsToPad =
+      take lineCount $ rowsToPad <> repeat ""
 
 getTerminalSize :: IO ScreenDimensions
 getTerminalSize =
