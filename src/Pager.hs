@@ -18,6 +18,17 @@ import qualified System.IO.Error as IOError
 import System.Info as SystemInfo
 import System.Process (readProcess)
 
+data Command
+  = Continue
+  | Cancel
+  deriving (Eq, Show)
+
+data ScreenDimensions = ScreenDimensions
+  { screenRows :: Int,
+    screenColumns :: Int
+  }
+  deriving (Show)
+
 pager :: IO ()
 pager =
   handleIOError $
@@ -70,12 +81,6 @@ wordWrap lineLength lineText
            in (wrappedLine, Text.tail rest)
       | otherwise = softWrap handwrappedText (textIndex - 1)
 
-data ScreenDimensions = ScreenDimensions
-  { screenRows :: Int,
-    screenColumns :: Int
-  }
-  deriving (Show)
-
 paginate :: ScreenDimensions -> Text.Text -> [Text.Text]
 paginate dimensions text =
   let unwrappedLines = Text.lines text
@@ -99,11 +104,6 @@ getTerminalSize =
           { screenRows = read $ init rows,
             screenColumns = read $ init cols
           }
-
-data Command
-  = Continue
-  | Cancel
-  deriving (Eq, Show)
 
 getCommand :: IO Command
 getCommand =
