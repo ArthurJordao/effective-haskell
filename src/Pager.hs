@@ -23,8 +23,12 @@ pager =
   handleIOError $
     handleArgs
       >>= eitherToError
-      >>= TextIO.readFile
-      >>= TextIO.putStr
+      >>= flip openFile ReadMode
+      >>= TextIO.hGetContents
+      >>= \contents ->
+        getTerminalSize >>= \termSize ->
+          let pages = paginate termSize contents
+           in showPages pages
   where
     handleIOError :: IO () -> IO ()
     handleIOError ioAction =
