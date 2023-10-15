@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Lib
+import Pager (pager)
 
 main :: IO ()
-main = someFunc
+main = pager
