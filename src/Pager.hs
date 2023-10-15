@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Pager
@@ -110,10 +111,16 @@ getCommand =
       'q' -> return Cancel
       _ -> getCommand
 
-loop :: IO ()
-loop =
-  putStrLn "do you want to Continue (space) or quit (q)"
+clearScreen :: IO ()
+clearScreen =
+  BS.putStr "\^[[1J\^[[1;1H"
+
+showPages :: [Text.Text] -> IO ()
+showPages [] = return ()
+showPages (page : pages) =
+  clearScreen
+    >> TextIO.putStr page
     >> getCommand
     >>= \case
-      Continue -> putStrLn "okay, continuing!" >> loop
-      Cancel -> putStrLn "goodbye!"
+      Continue -> showPages pages
+      Cancel -> return ()
