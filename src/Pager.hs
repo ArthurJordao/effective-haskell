@@ -12,11 +12,16 @@ import qualified Control.Exception as Exception
 import qualified Data.ByteString as BS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as TextIO
+import qualified Data.Time.Clock as Clock
+import qualified Data.Time.Clock.POSIX as PosixClock
+import qualified Data.Time.Format as TimeFormat
+import qualified System.Directory as Directory
 import qualified System.Environment as Env
 import System.IO
 import qualified System.IO.Error as IOError
 import System.Info as SystemInfo
 import System.Process (readProcess)
+import Text.Printf (printf)
 
 data Command
   = Continue
@@ -26,6 +31,16 @@ data Command
 data ScreenDimensions = ScreenDimensions
   { screenRows :: Int,
     screenColumns :: Int
+  }
+  deriving (Show)
+
+data FileInfo = FileInfo
+  { filePath :: FilePath,
+    fileSize :: Int,
+    fileMTime :: Clock.UTCTime,
+    fileReadable :: Bool,
+    fileWriteable :: Bool,
+    fileExecutable :: Bool
   }
   deriving (Show)
 
@@ -128,3 +143,47 @@ showPages (page : pages) =
     >>= \case
       Continue -> showPages pages
       Cancel -> return ()
+
+fileInfo :: FilePath -> IO FileInfo
+fileInfo path = do
+  perms <- Directory.getPermissions path
+  mtime <- Directory.getModificationTime path
+  size <- BS.length <$> BS.readFile path
+  return
+    FileInfo
+      { filePath = path,
+        fileSize = size,
+        fileMTime = mtime,
+        fileReadable = Directory.readable perms,
+        fileWriteable = Directory.writable perms,
+        fileExecutable = Directory.executable perms
+      }
+
+formatFileInfo :: FileInfo -> Int -> Int -> Int -> Text.Text
+formatFileInfo file maxWidth totalPages currentPage =
+  let permissionString =
+        [ if file.fileReadable then 'r' else '-',
+          if file.fileWriteable then 'w' else '-',
+          if file.fileExecutable then 'x' else '-'
+        ]
+      timestamp = TimeFormat.formatTime TimeFormat.defaultTimeLocale "%F %T" file.fileMTime
+      statusLine =
+        Text.pack $
+          printf
+            "%s | permissions: %s | %d bytes | modified: %s | page: %d of %d"
+            file.filePath
+            permissionString
+            file.fileSize
+            timestamp
+            currentPage
+            totalPages
+   in invertText $ truncateStatus statusLine
+  where
+    truncateStatus statusLine
+      | maxWidth <= 3 = ""
+      | Text.length statusLine > maxWidth = Text.take (maxWidth - 3) statusLine <> "..."
+      | otherwise = statusLine
+    invertText inputStr =
+      let reverseVideo = "\^[[7m"
+          resetVideo = "\^[[0m"
+       in reverseVideo <> inputStr <> resetVideo

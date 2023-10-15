@@ -38,8 +38,10 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , directory
     , process
     , text
+    , time
   default-language: Haskell2010
 
 executable haskell-learn-exe
@@ -54,9 +56,11 @@ executable haskell-learn-exe
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , directory
     , haskell-learn
     , process
     , text
+    , time
   default-language: Haskell2010
 
 test-suite haskell-learn-test
@@ -72,7 +76,9 @@ test-suite haskell-learn-test
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , directory
     , haskell-learn
     , process
     , text
+    , time
   default-language: Haskell2010

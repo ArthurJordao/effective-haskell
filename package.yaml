@@ -24,6 +24,8 @@ dependencies:
 - text
 - bytestring
 - process
+- time
+- directory
 
 ghc-options:
 - -Wall
