@@ -18,6 +18,7 @@ import Text.Printf (printf)
 data Command
   = Continue
   | Cancel
+  | Backwards
   deriving (Eq, Show)
 
 data ScreenDimensions = ScreenDimensions
@@ -44,7 +45,7 @@ pager = do
   hSetBuffering stdout NoBuffering
   finfos <- traverse fileInfo paths
   let pages = finfos >>= paginate termSize
-  showPages pages
+  showPages [] pages
 
 handleArgs :: IO (Either Text [FilePath])
 handleArgs =
@@ -123,20 +124,24 @@ getCommand =
     >>= \case
       ' ' -> return Continue
       'q' -> return Cancel
+      'b' -> return Backwards
       _ -> getCommand
 
 clearScreen :: IO ()
 clearScreen =
   BS.putStr "\^[[1J\^[[1;1H"
 
-showPages :: [Text] -> IO ()
-showPages [] = return ()
-showPages (page : pages) =
+showPages :: [Text] -> [Text] -> IO ()
+showPages _ [] = return ()
+showPages previousPages (page : pages) =
   clearScreen
     >> TextIO.putStr page
     >> getCommand
     >>= \case
-      Continue -> showPages pages
+      Continue -> showPages (page : previousPages) pages
+      Backwards -> case previousPages of
+        [] -> showPages previousPages (page : pages)
+        (pPage : pPages) -> showPages pPages (pPage : page : pages)
       Cancel -> return ()
 
 fileInfo :: FilePath -> IO FileInfo
