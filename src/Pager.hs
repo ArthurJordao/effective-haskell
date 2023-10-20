@@ -53,7 +53,7 @@ pager = do
   let pages = paginate termSize finfo contents
   showPages pages
 
-handleArgs :: IO (Either String FilePath)
+handleArgs :: IO (Either Text.Text FilePath)
 handleArgs =
   parseArgs <$> Env.getArgs
   where
