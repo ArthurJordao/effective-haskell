@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Pager
   ( pager,
@@ -104,8 +105,8 @@ paginate dimensions finfo text =
 getTerminalSize :: IO ScreenDimensions
 getTerminalSize =
   case SystemInfo.os of
-    "darwin" -> tputScreenDimensions
-    "linux" -> tputScreenDimensions
+    "darwin" -> handleIOError tputScreenDimensions
+    "linux" -> handleIOError tputScreenDimensions
     _ -> pure $ ScreenDimensions {screenRows = 25, screenColumns = 80}
   where
     tputScreenDimensions :: IO ScreenDimensions
@@ -117,6 +118,10 @@ getTerminalSize =
           { screenRows = read $ init rows,
             screenColumns = read $ init cols
           }
+    handleIOError :: IO a -> IO a
+    handleIOError ioAction =
+      Exception.catch ioAction $
+        \(_ :: IOError) -> Exception.throw . IOError.userError $ "tput not found"
 
 getCommand :: IO Command
 getCommand =
