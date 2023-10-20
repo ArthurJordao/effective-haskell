@@ -41,8 +41,7 @@ data FileInfo = FileInfo
 
 data ProgramState = ProgramState
   { previousPages :: [Text],
-    nextPages :: [Text],
-    onHelp :: Bool
+    nextPages :: [Text]
   }
 
 pager :: IO ()
@@ -52,7 +51,7 @@ pager = do
   hSetBuffering stdout NoBuffering
   finfos <- traverse fileInfo paths
   let pages = finfos >>= paginate termSize
-  showPages $ ProgramState [] pages False
+  showPages $ ProgramState [] pages
 
 handleArgs :: IO (Either Text [FilePath])
 handleArgs =
@@ -141,25 +140,19 @@ clearScreen =
 
 showPages :: ProgramState -> IO ()
 showPages state =
-  if state.onHelp
-    then
+  case state.nextPages of
+    (page : nextPages) ->
       clearScreen
-        >> TextIO.putStr "You are on help"
+        >> TextIO.putStr page
         >> getCommand
-        >> return ()
-    else case state.nextPages of
-      (page : nextPages) ->
-        clearScreen
-          >> TextIO.putStr page
-          >> getCommand
-          >>= \case
-            Continue -> showPages $ ProgramState (page : state.previousPages) nextPages False
-            Backwards -> case state.previousPages of
-              [] -> showPages $ ProgramState state.previousPages state.nextPages False
-              (pPage : pPages) -> showPages $ ProgramState pPages (pPage : state.nextPages) False
-            Cancel -> return ()
-            Help -> showPages $ ProgramState state.previousPages state.nextPages True
-      [] -> return ()
+        >>= \case
+          Continue -> showPages $ ProgramState (page : state.previousPages) nextPages
+          Backwards -> case state.previousPages of
+            [] -> showPages $ ProgramState state.previousPages state.nextPages
+            (pPage : pPages) -> showPages $ ProgramState pPages (pPage : state.nextPages)
+          Cancel -> return ()
+          Help -> Env.withArgs ["help"] pager >> showPages state
+    [] -> return ()
 
 fileInfo :: FilePath -> IO FileInfo
 fileInfo path = do
