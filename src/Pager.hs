@@ -19,6 +19,7 @@ data Command
   = Continue
   | Cancel
   | Backwards
+  | Help
   deriving (Eq, Show)
 
 data ScreenDimensions = ScreenDimensions
@@ -38,6 +39,12 @@ data FileInfo = FileInfo
   }
   deriving (Show)
 
+data ProgramState = ProgramState
+  { previousPages :: [Text],
+    nextPages :: [Text],
+    onHelp :: Bool
+  }
+
 pager :: IO ()
 pager = do
   paths <- eitherToError =<< handleArgs
@@ -45,7 +52,7 @@ pager = do
   hSetBuffering stdout NoBuffering
   finfos <- traverse fileInfo paths
   let pages = finfos >>= paginate termSize
-  showPages [] pages
+  showPages $ ProgramState [] pages False
 
 handleArgs :: IO (Either Text [FilePath])
 handleArgs =
@@ -125,24 +132,34 @@ getCommand =
       ' ' -> return Continue
       'q' -> return Cancel
       'b' -> return Backwards
+      'h' -> return Help
       _ -> getCommand
 
 clearScreen :: IO ()
 clearScreen =
   BS.putStr "\^[[1J\^[[1;1H"
 
-showPages :: [Text] -> [Text] -> IO ()
-showPages _ [] = return ()
-showPages previousPages (page : pages) =
-  clearScreen
-    >> TextIO.putStr page
-    >> getCommand
-    >>= \case
-      Continue -> showPages (page : previousPages) pages
-      Backwards -> case previousPages of
-        [] -> showPages previousPages (page : pages)
-        (pPage : pPages) -> showPages pPages (pPage : page : pages)
-      Cancel -> return ()
+showPages :: ProgramState -> IO ()
+showPages state =
+  if state.onHelp
+    then
+      clearScreen
+        >> TextIO.putStr "You are on help"
+        >> getCommand
+        >> return ()
+    else case state.nextPages of
+      (page : nextPages) ->
+        clearScreen
+          >> TextIO.putStr page
+          >> getCommand
+          >>= \case
+            Continue -> showPages $ ProgramState (page : state.previousPages) nextPages False
+            Backwards -> case state.previousPages of
+              [] -> showPages $ ProgramState state.previousPages state.nextPages False
+              (pPage : pPages) -> showPages $ ProgramState pPages (pPage : state.nextPages) False
+            Cancel -> return ()
+            Help -> showPages $ ProgramState state.previousPages state.nextPages True
+      [] -> return ()
 
 fileInfo :: FilePath -> IO FileInfo
 fileInfo path = do
