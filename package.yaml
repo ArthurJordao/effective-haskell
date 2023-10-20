@@ -38,6 +38,13 @@ ghc-options:
 - -Wpartial-fields
 - -Wredundant-constraints
 
+default-extensions:
+  - LambdaCase
+  - OverloadedRecordDot
+  - OverloadedStrings
+  - ScopedTypeVariables
+  - NoFieldSelectors
+
 library:
   source-dirs: src
 

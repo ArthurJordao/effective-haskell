@@ -1,15 +1,8 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedRecordDot #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
-module Pager
-  ( pager,
-  )
-where
+module Pager (pager) where
 
 import qualified Control.Exception as Exception
 import qualified Data.ByteString as BS
+import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as TextIO
 import qualified Data.Time.Clock as Clock
@@ -39,29 +32,28 @@ data FileInfo = FileInfo
     fileMTime :: Clock.UTCTime,
     fileReadable :: Bool,
     fileWriteable :: Bool,
-    fileExecutable :: Bool
+    fileExecutable :: Bool,
+    contents :: Text
   }
   deriving (Show)
 
 pager :: IO ()
 pager = do
-  targetFilePath <- eitherToError =<< handleArgs
-  contents <- TextIO.hGetContents =<< openFile targetFilePath ReadMode
+  paths <- eitherToError =<< handleArgs
   termSize <- getTerminalSize
   hSetBuffering stdout NoBuffering
-  finfo <- fileInfo targetFilePath
-  let pages = paginate termSize finfo contents
+  finfos <- traverse fileInfo paths
+  let pages = finfos >>= paginate termSize
   showPages pages
 
-handleArgs :: IO (Either Text.Text FilePath)
+handleArgs :: IO (Either Text [FilePath])
 handleArgs =
   parseArgs <$> Env.getArgs
   where
     parseArgs argumentList =
       case argumentList of
-        [arg] -> Right arg
         [] -> Left "no arguments provided"
-        _ -> Left "error multiple files not supported"
+        arg -> Right arg
 
 eitherToError :: (Show a) => Either a b -> IO b
 eitherToError (Right a) = return a
@@ -74,7 +66,7 @@ groupsOf n elems =
   let (hd, tl) = splitAt n elems
    in hd : groupsOf n tl
 
-wordWrap :: Int -> Text.Text -> [Text.Text]
+wordWrap :: Int -> Text -> [Text]
 wordWrap lineLength lineText
   | Text.length lineText <= lineLength = [lineText]
   | otherwise =
@@ -89,16 +81,16 @@ wordWrap lineLength lineText
            in (wrappedLine, Text.tail rest)
       | otherwise = softWrap handwrappedText (textIndex - 1)
 
-paginate :: ScreenDimensions -> FileInfo -> Text.Text -> [Text.Text]
-paginate dimensions finfo text =
+paginate :: ScreenDimensions -> FileInfo -> [Text]
+paginate dimensions finfo =
   let rows' = dimensions.screenRows - 1
-      wrappedLines = concatMap (wordWrap dimensions.screenColumns) (Text.lines text)
+      wrappedLines = concatMap (wordWrap dimensions.screenColumns) (Text.lines finfo.contents)
       pages = map (Text.unlines . padTo rows') $ groupsOf rows' wrappedLines
       pageCount = length pages
       statusLines = map (formatFileInfo finfo dimensions.screenColumns pageCount) [1 .. pageCount]
    in zipWith (<>) pages statusLines
   where
-    padTo :: Int -> [Text.Text] -> [Text.Text]
+    padTo :: Int -> [Text] -> [Text]
     padTo lineCount rowsToPad =
       take lineCount $ rowsToPad <> repeat ""
 
@@ -137,7 +129,7 @@ clearScreen :: IO ()
 clearScreen =
   BS.putStr "\^[[1J\^[[1;1H"
 
-showPages :: [Text.Text] -> IO ()
+showPages :: [Text] -> IO ()
 showPages [] = return ()
 showPages (page : pages) =
   clearScreen
@@ -149,6 +141,7 @@ showPages (page : pages) =
 
 fileInfo :: FilePath -> IO FileInfo
 fileInfo path = do
+  contents <- TextIO.hGetContents =<< openFile path ReadMode
   perms <- Directory.getPermissions path
   mtime <- Directory.getModificationTime path
   size <- BS.length <$> BS.readFile path
@@ -159,10 +152,11 @@ fileInfo path = do
         fileMTime = mtime,
         fileReadable = Directory.readable perms,
         fileWriteable = Directory.writable perms,
-        fileExecutable = Directory.executable perms
+        fileExecutable = Directory.executable perms,
+        contents = contents
       }
 
-formatFileInfo :: FileInfo -> Int -> Int -> Int -> Text.Text
+formatFileInfo :: FileInfo -> Int -> Int -> Int -> Text
 formatFileInfo file maxWidth totalPages currentPage =
   let permissionString =
         [ if file.fileReadable then 'r' else '-',
