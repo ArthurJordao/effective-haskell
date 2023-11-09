@@ -27,6 +27,7 @@ library
   exposed-modules:
       IOActions
       Pager
+      TraverseDirectory
       Typeclasses
   other-modules:
       Paths_haskell_learn
@@ -45,6 +46,7 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , process
     , text
@@ -70,6 +72,7 @@ executable haskell-learn-exe
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , haskell-learn
     , process
@@ -97,6 +100,7 @@ test-suite haskell-learn-test
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , haskell-learn
     , process

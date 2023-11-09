@@ -26,6 +26,7 @@ dependencies:
 - process
 - time
 - directory
+- containers
 
 ghc-options:
 - -Wall
