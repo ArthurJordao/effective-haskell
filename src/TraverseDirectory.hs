@@ -5,6 +5,7 @@ module TraverseDirectory
     traverseDirectory',
     longestContents,
     naiveTraversal,
+    directorySummaryWithMetrics,
   )
 where
 
@@ -132,8 +133,8 @@ directorySummaryWithMetrics root = do
             Map.insertWith (+) letter (1 :: Int) histogram
           newHistogram = Text.foldl' addCharToHistogram oldHistogram contents
       writeIORef histogramRef newHistogram
-    histogram <- readIORef histogramRef
-    putStrLn "Histogram Data:"
-    for_ (Map.toList histogram) $ \(letter, count) ->
-      putStrLn $ printf "    %c: %d" letter count
-    displayMetrics metrics
+  histogram <- readIORef histogramRef
+  putStrLn "Histogram Data:"
+  for_ (Map.toList histogram) $ \(letter, count) ->
+    putStrLn $ printf "    %c: %d" letter count
+  displayMetrics metrics
