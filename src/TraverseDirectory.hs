@@ -1,6 +1,12 @@
 {-# LANGUAGE TypeApplications #-}
 
-module TraverseDirectory where
+module TraverseDirectory
+  ( traverseDirectory,
+    traverseDirectory',
+    longestContents,
+    naiveTraversal,
+  )
+where
 
 import Control.Exception (IOException, handle)
 import Control.Monad (unless)
@@ -16,7 +22,6 @@ import System.Directory
     doesFileExist,
     listDirectory,
   )
-import System.Posix.Internals (fileType)
 
 dropSuffix :: String -> String -> String
 dropSuffix suffix s
