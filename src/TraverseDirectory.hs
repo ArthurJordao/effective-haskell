@@ -14,7 +14,7 @@ import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Foldable (for_)
-import Data.IORef (modifyIORef, newIORef, readIORef, writeIORef)
+import Data.IORef (modifyIORef, modifyIORef', newIORef, readIORef)
 import Data.List (isSuffixOf)
 import qualified Data.Map as Map
 import qualified Data.Set as Set (Set, empty, insert, member)
@@ -132,7 +132,7 @@ directorySummaryWithMetrics root = do
       let addCharToHistogram histogram letter =
             Map.insertWith (+) letter (1 :: Int) histogram
           newHistogram = Text.foldl' addCharToHistogram oldHistogram contents
-      writeIORef histogramRef newHistogram
+      modifyIORef' histogramRef (const newHistogram)
   histogram <- readIORef histogramRef
   putStrLn "Histogram Data:"
   for_ (Map.toList histogram) $ \(letter, count) ->

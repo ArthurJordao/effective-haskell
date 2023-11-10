@@ -1,6 +1,7 @@
 module Main (main) where
 
-import Pager (pager)
+import System.Environment (getArgs)
+import TraverseDirectory (directorySummaryWithMetrics)
 
 main :: IO ()
-main = pager
+main = getArgs >>= directorySummaryWithMetrics . head
