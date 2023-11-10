@@ -3,19 +3,20 @@
 module TraverseDirectory where
 
 import Control.Exception (IOException, handle)
-import Control.Monad (join, unless, void)
+import Control.Monad (unless)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.Foldable (for_)
-import Data.IORef (modifyIORef, newIORef, readIORef, writeIORef)
+import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.List (isSuffixOf)
 import qualified Data.Set as Set (Set, empty, insert, member)
 import System.Directory
   ( canonicalizePath,
     doesDirectoryExist,
     doesFileExist,
-    getDirectoryContents,
     listDirectory,
   )
-import Text.Printf (printf)
+import System.Posix.Internals (fileType)
 
 dropSuffix :: String -> String -> String
 dropSuffix suffix s
@@ -83,3 +84,12 @@ traverseDirectory' rootPath action = do
   traverseDirectory rootPath $ \file -> do
     modifyIORef resultsRef (action file :)
   readIORef resultsRef
+
+longestContents :: FilePath -> IO ByteString
+longestContents rootPath = do
+  contentsRef <- newIORef BS.empty
+  let takeLongestFile a b = if BS.length a >= BS.length b then a else b
+  traverseDirectory rootPath $ \file -> do
+    contents <- BS.readFile file
+    modifyIORef contentsRef (takeLongestFile contents)
+  readIORef contentsRef
