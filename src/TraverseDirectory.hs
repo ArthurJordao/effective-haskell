@@ -51,10 +51,9 @@ naiveTraversal rootPath action = do
     fixPath parent fname = parent <> "/" <> fname
     getPaths = mapM (`naiveTraversal` action)
 
-traverseDirectory :: FilePath -> (FilePath -> a) -> IO [a]
+traverseDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
 traverseDirectory rootPath action = do
   seenRef <- newIORef @(Set.Set String) Set.empty
-  resultRef <- newIORef []
   let haveSeenDirectory canonicalPath =
         Set.member canonicalPath <$> readIORef seenRef
       addDirectoryToSeen canonicalPath = do
@@ -69,11 +68,18 @@ traverseDirectory rootPath action = do
             case classification of
               FileTypeOther -> pure ()
               FileTypeRegularType ->
-                modifyIORef resultRef (\results -> action file : results)
+                action file
+              -- modifyIORef resultRef (\results -> action file : results)
               FileTypeDirectory -> do
                 alreadyProcessed <- haveSeenDirectory file
                 unless alreadyProcessed $ do
                   addDirectoryToSeen file
                   traverseSubdirectory file
   traverseSubdirectory (dropSuffix "/" rootPath)
-  readIORef resultRef
+
+traverseDirectory' :: FilePath -> (FilePath -> a) -> IO [a]
+traverseDirectory' rootPath action = do
+  resultsRef <- newIORef []
+  traverseDirectory rootPath $ \file -> do
+    modifyIORef resultsRef (action file :)
+  readIORef resultsRef
