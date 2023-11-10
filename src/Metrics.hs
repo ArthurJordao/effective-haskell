@@ -6,6 +6,7 @@ module Metrics
     timeFunction,
     tickSuccess,
     tickFailure,
+    displayMetrics,
   )
 where
 

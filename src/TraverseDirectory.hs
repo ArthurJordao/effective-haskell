@@ -13,16 +13,27 @@ import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Foldable (for_)
-import Data.IORef (modifyIORef, newIORef, readIORef)
+import Data.IORef (modifyIORef, newIORef, readIORef, writeIORef)
 import Data.List (isSuffixOf)
+import qualified Data.Map as Map
 import qualified Data.Set as Set (Set, empty, insert, member)
-import Metrics (Metrics, tickFailure, tickSuccess, timeFunction)
+import qualified Data.Text as Text
+import qualified Data.Text.IO as TextIO
+import Metrics
+  ( Metrics,
+    displayMetrics,
+    newMetrics,
+    tickFailure,
+    tickSuccess,
+    timeFunction,
+  )
 import System.Directory
   ( canonicalizePath,
     doesDirectoryExist,
     doesFileExist,
     listDirectory,
   )
+import Text.Printf (printf)
 
 dropSuffix :: String -> String -> String
 dropSuffix suffix s
@@ -102,3 +113,27 @@ longestContents metrics rootPath = do
     contents <- BS.readFile file
     modifyIORef contentsRef (takeLongestFile contents)
   readIORef contentsRef
+
+directorySummaryWithMetrics :: FilePath -> IO ()
+directorySummaryWithMetrics root = do
+  metrics <- newMetrics
+  histogramRef <- newIORef Map.empty
+  traverseDirectory metrics root $ \file -> do
+    putStrLn $ file <> ":"
+    contents <-
+      timeFunction metrics "TextIO.readFile" $
+        TextIO.readFile file
+    timeFunction metrics "wordcount" $
+      let wordCount = length $ Text.words contents
+       in putStrLn $ "    word: count: " <> show wordCount
+    timeFunction metrics "histogram" $ do
+      oldHistogram <- readIORef histogramRef
+      let addCharToHistogram histogram letter =
+            Map.insertWith (+) letter (1 :: Int) histogram
+          newHistogram = Text.foldl' addCharToHistogram oldHistogram contents
+      writeIORef histogramRef newHistogram
+    histogram <- readIORef histogramRef
+    putStrLn "Histogram Data:"
+    for_ (Map.toList histogram) $ \(letter, count) ->
+      putStrLn $ printf "    %c: %d" letter count
+    displayMetrics metrics
