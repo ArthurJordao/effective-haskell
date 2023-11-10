@@ -16,6 +16,7 @@ import Data.Foldable (for_)
 import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.List (isSuffixOf)
 import qualified Data.Set as Set (Set, empty, insert, member)
+import Metrics (Metrics, tickFailure, tickSuccess, timeFunction)
 import System.Directory
   ( canonicalizePath,
     doesDirectoryExist,
@@ -57,44 +58,47 @@ naiveTraversal rootPath action = do
     fixPath parent fname = parent <> "/" <> fname
     getPaths = mapM (`naiveTraversal` action)
 
-traverseDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
-traverseDirectory rootPath action = do
+traverseDirectory :: Metrics -> FilePath -> (FilePath -> IO ()) -> IO ()
+traverseDirectory metrics rootPath action = do
   seenRef <- newIORef @(Set.Set String) Set.empty
   let haveSeenDirectory canonicalPath =
         Set.member canonicalPath <$> readIORef seenRef
       addDirectoryToSeen canonicalPath = do
         modifyIORef seenRef $ Set.insert canonicalPath
-      traverseSubdirectory subdirPath = do
-        contents <- listDirectory subdirPath
-        for_ contents $ \file' -> do
-          handle @IOException (\_ -> pure ()) $ do
-            let file = subdirPath <> "/" <> file'
-            canonicalPath <- canonicalizePath file
-            classification <- classifyFile canonicalPath
-            case classification of
-              FileTypeOther -> pure ()
-              FileTypeRegularType ->
-                action file
-              -- modifyIORef resultRef (\results -> action file : results)
-              FileTypeDirectory -> do
-                alreadyProcessed <- haveSeenDirectory file
-                unless alreadyProcessed $ do
-                  addDirectoryToSeen file
-                  traverseSubdirectory file
+      handler ex = print ex >> tickFailure metrics
+      traverseSubdirectory subdirPath =
+        timeFunction metrics "traverseSubdirectory" $ do
+          contents <- listDirectory subdirPath
+          for_ contents $ \file' -> do
+            handle @IOException handler $ do
+              let file = subdirPath <> "/" <> file'
+              canonicalPath <- canonicalizePath file
+              classification <- classifyFile canonicalPath
+              result <- case classification of
+                FileTypeOther -> pure ()
+                FileTypeRegularType ->
+                  action file
+                FileTypeDirectory -> do
+                  alreadyProcessed <- haveSeenDirectory file
+                  unless alreadyProcessed $ do
+                    addDirectoryToSeen file
+                    traverseSubdirectory file
+              tickSuccess metrics
+              pure result
   traverseSubdirectory (dropSuffix "/" rootPath)
 
-traverseDirectory' :: FilePath -> (FilePath -> a) -> IO [a]
-traverseDirectory' rootPath action = do
+traverseDirectory' :: Metrics -> FilePath -> (FilePath -> a) -> IO [a]
+traverseDirectory' metrics rootPath action = do
   resultsRef <- newIORef []
-  traverseDirectory rootPath $ \file -> do
+  traverseDirectory metrics rootPath $ \file -> do
     modifyIORef resultsRef (action file :)
   readIORef resultsRef
 
-longestContents :: FilePath -> IO ByteString
-longestContents rootPath = do
+longestContents :: Metrics -> FilePath -> IO ByteString
+longestContents metrics rootPath = do
   contentsRef <- newIORef BS.empty
   let takeLongestFile a b = if BS.length a >= BS.length b then a else b
-  traverseDirectory rootPath $ \file -> do
+  traverseDirectory metrics rootPath $ \file -> do
     contents <- BS.readFile file
     modifyIORef contentsRef (takeLongestFile contents)
   readIORef contentsRef

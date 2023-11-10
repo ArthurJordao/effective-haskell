@@ -2,6 +2,10 @@ module Metrics
   ( AppMetrics,
     newMetrics,
     printMetrics,
+    Metrics,
+    timeFunction,
+    tickSuccess,
+    tickFailure,
   )
 where
 
