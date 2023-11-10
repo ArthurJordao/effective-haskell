@@ -2,7 +2,7 @@ module Metrics
   ( AppMetrics,
     newMetrics,
     printMetrics,
-    Metrics,
+    Metrics (..),
     timeFunction,
     tickSuccess,
     tickFailure,
