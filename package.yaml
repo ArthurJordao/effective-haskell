@@ -27,6 +27,7 @@ dependencies:
 - time
 - directory
 - containers
+- vector
 
 ghc-options:
 - -Wall

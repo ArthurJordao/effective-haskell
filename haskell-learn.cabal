@@ -27,6 +27,7 @@ library
   exposed-modules:
       IOActions
       Metrics
+      NaiveSpellchecker
       Pager
       TraverseDirectory
       Typeclasses
@@ -52,6 +53,7 @@ library
     , process
     , text
     , time
+    , vector
   default-language: Haskell2010
 
 executable haskell-learn-exe
@@ -79,6 +81,7 @@ executable haskell-learn-exe
     , process
     , text
     , time
+    , vector
   default-language: Haskell2010
 
 test-suite haskell-learn-test
@@ -107,4 +110,5 @@ test-suite haskell-learn-test
     , process
     , text
     , time
+    , vector
   default-language: Haskell2010
